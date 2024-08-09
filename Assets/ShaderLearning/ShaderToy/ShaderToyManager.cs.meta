@@ -1,0 +1,12 @@
+fileFormatVersion: 2
+guid: e687e7c32cebde04980abc8ca091c43e
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - PPShader: {fileID: 4800000, guid: 5486dbe1a8410344e9c118ab7c4b9900, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
