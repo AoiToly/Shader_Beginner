@@ -56,7 +56,7 @@ Shader "Shader Learning/URP/E4_TransformMatrix"
                 float4 _Translate;
                 float4 _Scale;
                 float4 _Rotation;
-                float4 _CameraFOV;
+                float _CameraFOV;
             CBUFFER_END
 
             Varyings vert (Attributes v)
@@ -129,7 +129,7 @@ Shader "Shader Learning/URP/E4_TransformMatrix"
                 float3 viewY = normalize(float3(0, 1, 0));
                 // 由于viewZ指向Z轴的负方向，因此根据右手定则，不能用viewY 叉乘 viewZ，而是反过来
                 float3 viewX = normalize(cross(viewZ, viewY));
-                // 此处理由同上s
+                // 此处理由同上
                 viewY = normalize(cross(viewX, viewZ));
                 
                 // 注，这个矩阵已经是转置后的矩阵了
@@ -148,21 +148,43 @@ Shader "Shader Learning/URP/E4_TransformMatrix"
                 // Vw^T * T
                 float4x4 MatrixWorldToView = mul(MatrixWorldToViewR, MatrixWorldToViewT);
                 float4 positionVS = mul(MatrixWorldToView, positionWS);
-
+                
                 // 视图空间转齐次裁剪空间
                 // float4 positionCS = TransformWViewToHClip(positionVS.xyz);
+                // 透视相机
+                #if _ISPERSPECTIVE_ON
+                    // 相机Fov的一半的弧度
+                    _CameraFOV = radians(_CameraFOV * 0.5);
+                    // 近裁剪面
+                    float n = _ProjectionParams.y;
+                    // 远裁剪面
+                    float f = _ProjectionParams.z;
+                    // 屏幕宽高比
+                    float aspect = _ScreenParams.x / _ScreenParams.y;
+                    // 近裁剪面的高/2
+                    float h = n * tan(_CameraFOV);
+                    // 近裁剪面的宽/2
+                    float w = h * aspect;
 
-                // 正交投影
+                    // 透视矩阵
+                    float4x4 MatrixPerspToOrtho = float4x4(
+                        n, 0, 0, 0,
+                        0, n, 0, 0,
+                        0, 0, n+f, n*f,
+                        0, 0, -1, 0);
+                // 正交相机
+                #else
+                    // 近裁剪面
+                    float n = _ProjectionParams.y;
+                    // 远裁剪面
+                    float f = _ProjectionParams.z;
+                    // 正交相机的宽/2
+                    float w = unity_OrthoParams.x;
+                    // 正交相机的高/2
+                    float h = unity_OrthoParams.y;
+                #endif
+                // 计算正交投影
                 // 原理为，先平移变换使得两个坐标系原点一致，再缩放变换使得基向量相同
-                
-                // 近裁剪面
-                float n = _ProjectionParams.y;
-                // 远裁剪面
-                float f = _ProjectionParams.z;
-                // 正交相机的宽/2
-                float w = unity_OrthoParams.x;
-                // 正交相机的高/2
-                float h = unity_OrthoParams.y;
                 // 注意，由于视图空间是右手坐标系而裁剪空间是左手坐标系，因此计算时要用-n和-f
                 // DX平台（坐标系原点左上角）
                 #if UNITY_UV_STARTS_AT_TOP
@@ -197,27 +219,32 @@ Shader "Shader Learning/URP/E4_TransformMatrix"
                         0, 0, 0, 1);
                 #endif
                 float4x4 MatrixViewToClipOrtho = mul(MatrixViewToClipOrthoS, MatrixViewToClipOrthoT);
-                
-                // 透视投影
-                _CameraFOV = radians(_CameraFOV * 0.5);
-                //float ph = tan(_CameraFOV) * n;
-                //float pw = ph * _ScreenParams.x / _ScreenParams.y;
-                //float px = pw * positionVS.x / positionVS.z;
-                //float py = ph * positionVS.y / positionVS.z;
-                float cotA = 1 / tan(_CameraFOV);
-                float aspect = _ScreenParams.x / _ScreenParams.y;
 
-                float4x4 MatrixPerspToOrtho = float4x4(
-                    cotA / aspect, 0, 0, 0,
-                    0, cotA, 0, 0,
-                    0, 0, -(f+n)/(n-f), -2 * f * n / (n - f),
-                    0, 0, -1, 0);
                 #if _ISPERSPECTIVE_ON
-                    float4x4 MatrixViewToClip = MatrixPerspToOrtho;
+                    float4x4 MatrixViewToClip = MatrixViewToClipOrtho * MatrixPerspToOrtho;
                 #else
                     float4x4 MatrixViewToClip = MatrixViewToClipOrtho;
                 #endif
                 float4 positionCS = mul(MatrixViewToClip, positionVS);
+
+                //// DirectX平台
+                //#if UNITY_UV_STARTS_AT_TOP
+                //    float4x4 MatrixPerspective = float4x4(
+                //        n/w, 0, 0, 0,
+                //        0, -n/h, 0, 0,
+                //        0, 0, n/(f-n), (n*f)/(f-n),
+                //        0, 0, -1, 0);
+                //// OpenGL平台
+                //#else
+                //    float4x4 MatrixPerspective = float4x4(
+                //        n/w, 0, 0, 0,
+                //        0, n/h, 0, 0,
+                //        0, 0, (n+f)/(n-f), (2*n*f)/(n-f),
+                //        0, 0, -1, 0);
+                //#endif
+                //positionCS = mul(MatrixPerspective, positionVS);
+
+
 
                 Varyings o = (Varyings)0;
                 o.positionCS = positionCS;

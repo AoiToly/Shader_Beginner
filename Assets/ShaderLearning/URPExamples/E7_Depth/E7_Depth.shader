@@ -1,26 +1,26 @@
-// 由默认Unlit Shader Graph精简而来
-Shader "Shader Learning/URP/E1_SimpliestUnlit"
+Shader "Shader Learning/URP/E7_Depth"
 {
-    Properties
-    {
-        _MainTex("Main Tex", 2D) = "white" {}
-        [HDR]_Color("Color(RGB)", Color) = (1, 1, 1, 1)
-    }
-
     // URP
     SubShader
     {
         Tags 
         {
             "RenderPipeline" = "UniversalPipeline"
-            "RenderType" = "Opaque"
+            "RenderType" = "Transparent"
+            "Queue" = "Transparent"
         }
+
+        ZWrite off
+
         Pass
         {
             HLSLPROGRAM
         
             #pragma vertex vert
             #pragma fragment frag
+
+            // 声明深度图及其采样器
+            #define REQUIRE_DEPTH_TEXTURE
         
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -30,10 +30,10 @@ Shader "Shader Learning/URP/E1_SimpliestUnlit"
             
             CBUFFER_START(UnityPerMaterial)
             TEXTURE2D(_MainTex);   // 纹理的定义，如果是编译到GLES2.0平台，则相当于_MainTex；否则就相当于sampler2D
-            float4 _MainTex_ST;
             SAMPLER(sampler_MainTex);   // 采样器定义，如果是编译到GLES2.0平台，则相当于空；否则就相当于SamplerState sampler_MainTex
             half4 _Color;
             CBUFFER_END
+            float4 _MainTex_ST;
 
             // 顶点着色器的输入（模型的数据信息）
             struct Attributes
@@ -61,9 +61,13 @@ Shader "Shader Learning/URP/E1_SimpliestUnlit"
             // 片段着色器
             void frag(Varyings i, out half4 outColor : SV_Target0)
             {
-                half4 mainTex = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv);
+                float2 screenUV = i.positionCS.xy/_ScreenParams.xy;
+                
+                half4 depthMap = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, screenUV);
+                half depth = Linear01Depth(depthMap.x, _ZBufferParams).x;
+                //half depth = LinearEyeDepth(depthMap.x, _ZBufferParams).x;
 
-                outColor = mainTex * _Color;
+                outColor = depth;
             }
             ENDHLSL
         }
@@ -72,7 +76,7 @@ Shader "Shader Learning/URP/E1_SimpliestUnlit"
     // Builtin
     SubShader
     {
-        Tags 
+        Tags
         {
             "RenderType" = "Opaque"
         }
@@ -85,9 +89,6 @@ Shader "Shader Learning/URP/E1_SimpliestUnlit"
         
             #include "UnityCG.cginc"
             
-            sampler2D _MainTex;
-            float4 _MainTex_ST;
-            half4 _Color;
             
             // 顶点着色器的输入（模型的数据信息）
             struct Attributes
@@ -102,13 +103,15 @@ Shader "Shader Learning/URP/E1_SimpliestUnlit"
                 float2 uv : TEXCOORD0;
             };
 
+            sampler2D _CameraDepthTexture;
+
             // 顶点着色器
             Varyings vert(Attributes v)
             {
                 Varyings o = (Varyings)0;
 
                 o.positionCS = UnityObjectToClipPos(v.positionOS);
-                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                o.uv = v.uv;
 
                 return o;
             }
@@ -116,12 +119,15 @@ Shader "Shader Learning/URP/E1_SimpliestUnlit"
             // 片段着色器
             void frag(Varyings i, out fixed4 outColor : SV_Target)
             {
-                half4 mainTex = tex2D(_MainTex, i.uv);
-
-                outColor = mainTex * _Color;
+                float2 uv = i.positionCS.xy / _ScreenParams.xy;
+                fixed depthMap = frac(tex2D(_CameraDepthTexture, uv));
+                fixed depth = Linear01Depth(depthMap);
+                //fixed depth = LinearEyeDepth(depthMap);
+                outColor = depth;
             }
             ENDCG
         }
     }
+
     FallBack "Hidden/Shader Graph/FallbackError"
 }

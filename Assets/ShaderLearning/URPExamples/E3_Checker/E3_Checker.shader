@@ -23,6 +23,7 @@ Shader "Shader Learning/URP/E3_Checker"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -41,6 +42,7 @@ Shader "Shader Learning/URP/E3_Checker"
                 float4 positionCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
                 float3 positionOS : TEXCOORD1;
+                float fogCoord  : TEXCOORD2;
             };
 
             CBUFFER_START(UnityPerMaterial)
@@ -55,6 +57,7 @@ Shader "Shader Learning/URP/E3_Checker"
                 o.positionCS = TransformObjectToHClip(v.positionOS.xyz);
                 o.uv = v.uv * _Repeat;
                 o.positionOS = v.positionOS.xyz;
+                o.fogCoord = ComputeFogFactor(o.positionCS.z);
                 return o;
             }
 
@@ -63,6 +66,7 @@ Shader "Shader Learning/URP/E3_Checker"
                 half2 uv = floor(i.uv * 2) / 2;
                 
                 outColor = frac(uv.x + uv.y) * (i.positionOS.y + _Offset) * _Color;
+                outColor.rgb = MixFog(outColor.rgb, i.fogCoord);
             }
             ENDHLSL
         }
