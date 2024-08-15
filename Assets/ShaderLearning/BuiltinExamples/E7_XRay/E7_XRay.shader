@@ -33,7 +33,7 @@ Shader "Shader Learning/Builtin/E7_XRay"
 
             v2f vert (appdata v)
             {
-                v2f o;
+                v2f o = UNITY_INITIALIZE_OUTPUT(v2f, o);
                 o.pos = UnityObjectToClipPos(v.vertex);
                 o.worldPos = mul(unity_ObjectToWorld, v.vertex);
                 o.worldNormal = UnityObjectToWorldNormal(v.normal);

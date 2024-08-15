@@ -1,10 +1,12 @@
-// 由默认Unlit Shader Graph精简而来
-Shader "Shader Learning/URP/E1_SimpliestUnlit"
+Shader "Shader Learning/URP/E11_CustomMaterialGUI"
 {
     Properties
     {
         _MainTex("Main Tex", 2D) = "white" {}
         [HDR]_Color("Color(RGB)", Color) = (1, 1, 1, 1)
+        _Float("Float", float) = 0
+        _Slider("Slider", range(0, 1)) = 0
+        _Vector("Vector", vector) = (0, 0, 0, 0)
     }
 
     // URP
@@ -32,6 +34,7 @@ Shader "Shader Learning/URP/E1_SimpliestUnlit"
             CBUFFER_START(UnityPerMaterial)
             float4 _MainTex_ST;
             half4 _Color;
+            float _Float;
             CBUFFER_END
             TEXTURE2D(_MainTex);   // 纹理的定义，如果是编译到GLES2.0平台，则相当于_MainTex；否则就相当于sampler2D
             SAMPLER(sampler_MainTex);   // 采样器定义，如果是编译到GLES2.0平台，则相当于空；否则就相当于SamplerState sampler_MainTex
@@ -128,4 +131,5 @@ Shader "Shader Learning/URP/E1_SimpliestUnlit"
         }
     }
     FallBack "Hidden/Shader Graph/FallbackError"
+    CustomEditor "E11_CustomMaterialGUI"
 }

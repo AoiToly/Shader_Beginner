@@ -124,5 +124,52 @@ Shader "Shader Learning/URP/E3_Checker"
             }
             ENDCG
         }
+
+        pass
+        {
+            // 这个Pass用于生成shadow map
+            Tags { "LightMode" = "ShadowCaster" }
+
+            CGPROGRAM
+
+            #pragma vertex vert
+            #pragma fragment frag
+            #pragma multi_compile_shadowcaster
+            #pragma multi_compile _ _DISSOLVEENABLED_ON
+
+            #include "UnityCG.cginc"
+
+            sampler2D _DissolveTex;
+            float4 _DissolveTex_ST;
+            fixed _Dissolve;
+
+            struct appdata
+            {
+                float4 vertex : POSITION;
+                half3 normal : NORMAL;
+                float2 uv : TEXCOORD0;
+            };
+
+            struct v2f
+            {
+                V2F_SHADOW_CASTER;
+                float2 uv : TEXCOORD0;
+            };
+
+            v2f vert(appdata v)
+            {
+                v2f o = (v2f)0;
+                TRANSFER_SHADOW_CASTER_NORMALOFFSET(o)
+                o.uv = TRANSFORM_TEX(v.uv, _DissolveTex);
+                return o;
+            }
+
+            fixed4 frag(v2f i) : SV_TARGET
+            {
+                SHADOW_CASTER_FRAGMENT(i)
+            }
+
+            ENDCG
+        }
     }
 }

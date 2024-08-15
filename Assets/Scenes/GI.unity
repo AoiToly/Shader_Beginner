@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 0}
+  m_SkyboxMaterial: {fileID: 2100000, guid: 089b4da36cf1539478f320f40fc48646, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -96,7 +96,7 @@ LightmapSettings:
     m_ExportTrainingData: 0
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
-  m_LightingDataAsset: {fileID: 112000000, guid: 44e4143daa2490447b64624294afea5e, type: 2}
+  m_LightingDataAsset: {fileID: 0}
   m_LightingSettings: {fileID: 4890085278179872738, guid: b49145ba71f88ef4a9bb5814031a6451, type: 2}
 --- !u!196 &4
 NavMeshSettings:
@@ -209,8 +209,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 301563941}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.055027656, y: -0.94277304, z: 0.21572456, w: -0.24822152}
-  m_LocalPosition: {x: -6.0397124, y: 4.792492, z: 8.99795}
+  m_LocalRotation: {x: -0.10265429, y: -0.8943483, z: 0.2827228, w: -0.33116606}
+  m_LocalPosition: {x: -1.5297256, y: 1.7737532, z: 1.553473}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
