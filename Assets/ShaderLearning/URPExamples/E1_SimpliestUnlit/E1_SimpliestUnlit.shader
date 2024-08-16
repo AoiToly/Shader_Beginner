@@ -39,7 +39,7 @@ Shader "Shader Learning/URP/E1_SimpliestUnlit"
             // 顶点着色器的输入（模型的数据信息）
             struct Attributes
             {
-                float4 positionOS : POSITION;
+                float3 positionOS : POSITION;
                 float2 uv : TEXCOORD0;
             };
             struct Varyings
@@ -54,7 +54,7 @@ Shader "Shader Learning/URP/E1_SimpliestUnlit"
             {
                 Varyings o = (Varyings)0;
 
-                o.positionCS = TransformObjectToHClip(v.positionOS.xyz);
+                o.positionCS = TransformObjectToHClip(v.positionOS);
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 o.fogCoord = ComputeFogFactor(o.positionCS.z);
                 return o;

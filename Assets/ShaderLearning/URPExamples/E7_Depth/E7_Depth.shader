@@ -63,8 +63,8 @@ Shader "Shader Learning/URP/E7_Depth"
             {
                 float2 screenUV = i.positionCS.xy/_ScreenParams.xy;
                 
-                half4 depthMap = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, screenUV);
-                half depth = Linear01Depth(depthMap.x, _ZBufferParams).x;
+                half depthMap = SAMPLE_TEXTURE2D(_CameraDepthTexture, sampler_CameraDepthTexture, screenUV).x;
+                half depth = Linear01Depth(depthMap, _ZBufferParams).x;
                 //half depth = LinearEyeDepth(depthMap.x, _ZBufferParams).x;
 
                 outColor = depth;

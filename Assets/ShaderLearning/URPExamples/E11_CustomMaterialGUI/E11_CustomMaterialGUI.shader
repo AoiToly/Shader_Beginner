@@ -7,6 +7,12 @@ Shader "Shader Learning/URP/E11_CustomMaterialGUI"
         _Float("Float", float) = 0
         _Slider("Slider", range(0, 1)) = 0
         _Vector("Vector", vector) = (0, 0, 0, 0)
+
+        _SrcBlend("SrcBlend", float) = 0
+        _DstBlend("DstBlend", float) = 0
+
+        // 开关，shader算法中无用，仅用于存储Editor状态
+        _Save("Save", vector) = (0, 0, 0, 0)
     }
 
     // URP
@@ -17,6 +23,9 @@ Shader "Shader Learning/URP/E11_CustomMaterialGUI"
             "RenderPipeline" = "UniversalPipeline"
             "RenderType" = "Opaque"
         }
+
+        Blend [_SrcBlend][_DstBlend]
+
         Pass
         {
             HLSLPROGRAM
@@ -24,6 +33,7 @@ Shader "Shader Learning/URP/E11_CustomMaterialGUI"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_fog
+            #pragma multi_compile _ _COLORENABLED_ON
         
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -68,7 +78,11 @@ Shader "Shader Learning/URP/E11_CustomMaterialGUI"
             {
                 half4 c = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv);
                 c.rgb = MixFog(c.rgb, i.fogCoord);
-                return c * _Color;
+                #if _COLORENABLED_ON
+                    return c * _Color;
+                #else
+                    return c;
+                #endif
             }
             ENDHLSL
         }
