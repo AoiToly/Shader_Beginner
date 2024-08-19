@@ -1,10 +1,9 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class WaterColor : MonoBehaviour
 {
     [Header("水的颜色过渡")]
+    // Gradient是内置的渐变条
     public Gradient WaterGradient01;
     public Gradient WaterGradient02;
 
