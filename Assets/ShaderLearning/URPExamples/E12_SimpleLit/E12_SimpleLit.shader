@@ -332,6 +332,73 @@ Shader "Shader Learning/URP/E12_SimpleLit"
                 #endif
             }
 
+            half4 UniversalFragmentBlinnPhong1(InputData inputData, SurfaceData surfaceData)
+            {
+                // Debug模式，Window->Analysis->Rendering Debugger
+                #if defined(DEBUG_DISPLAY)
+                    half4 debugColor;
+
+                    if (CanDebugOverrideOutputColor(inputData, surfaceData, debugColor))
+                    {
+                        return debugColor;
+                    }
+                #endif
+
+                // Rendering Layer
+                uint meshRenderingLayers = GetMeshRenderingLayer();
+
+                half4 shadowMask = CalculateShadowMask(inputData);
+                AmbientOcclusionFactor aoFactor = CreateAmbientOcclusionFactor(inputData, surfaceData);
+                Light mainLight = GetMainLight(inputData, shadowMask, aoFactor);
+
+                MixRealtimeAndBakedGI(mainLight, inputData.normalWS, inputData.bakedGI, aoFactor);
+
+                inputData.bakedGI *= surfaceData.albedo;
+
+                LightingData lightingData = CreateLightingData(inputData, surfaceData);
+                #ifdef _LIGHT_LAYERS
+                    if (IsMatchingLightLayer(mainLight.layerMask, meshRenderingLayers))
+                #endif
+                {
+                    lightingData.mainLightColor += CalculateBlinnPhong(mainLight, inputData, surfaceData);
+                }
+
+                #if defined(_ADDITIONAL_LIGHTS)
+                uint pixelLightCount = GetAdditionalLightsCount();
+
+                #if USE_FORWARD_PLUS
+                for (uint lightIndex = 0; lightIndex < min(URP_FP_DIRECTIONAL_LIGHTS_COUNT, MAX_VISIBLE_LIGHTS); lightIndex++)
+                {
+                    FORWARD_PLUS_SUBTRACTIVE_LIGHT_CHECK
+
+                    Light light = GetAdditionalLight(lightIndex, inputData, shadowMask, aoFactor);
+                    #ifdef _LIGHT_LAYERS
+                        if (IsMatchingLightLayer(light.layerMask, meshRenderingLayers))
+                    #endif
+                    {
+                        lightingData.additionalLightsColor += CalculateBlinnPhong(light, inputData, surfaceData);
+                    }
+                }
+                #endif
+
+                LIGHT_LOOP_BEGIN(pixelLightCount)
+                    Light light = GetAdditionalLight(lightIndex, inputData, shadowMask, aoFactor);
+                    #ifdef _LIGHT_LAYERS
+                        if (IsMatchingLightLayer(light.layerMask, meshRenderingLayers))
+                    #endif
+                    {
+                        lightingData.additionalLightsColor += CalculateBlinnPhong(light, inputData, surfaceData);
+                    }
+                LIGHT_LOOP_END
+                #endif
+
+                #if defined(_ADDITIONAL_LIGHTS_VERTEX)
+                    lightingData.vertexLightingColor += inputData.vertexLighting * surfaceData.albedo;
+                #endif
+
+                return CalculateFinalColor(lightingData, surfaceData.alpha);
+            }
+
             ///////////////////////////////////////////////////////////////////////////////
             //                  Vertex and Fragment functions                            //
             ///////////////////////////////////////////////////////////////////////////////
@@ -342,8 +409,10 @@ Shader "Shader Learning/URP/E12_SimpleLit"
             {
                 Varyings output = (Varyings)0;
 
+                // GPU实例化
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
+                // Stereo Target Eye，用于指定渲染到VR的哪个眼睛里
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
 
                 // 计算顶点相关信息，世界、视图、裁剪、NDC坐标
@@ -351,40 +420,47 @@ Shader "Shader Learning/URP/E12_SimpleLit"
                 // 计算世界空间下的法线相关信息，法线、切线、负切线
                 VertexNormalInputs normalInput = GetVertexNormalInputs(input.normalOS, input.tangentOS);
 
-            #if defined(_FOG_FRAGMENT)
+                #if defined(_FOG_FRAGMENT)
                     half fogFactor = 0;
-            #else
+                #else
                     half fogFactor = ComputeFogFactor(vertexInput.positionCS.z);
-            #endif
+                #endif
 
                 output.uv = TRANSFORM_TEX(input.texcoord, _BaseMap);
                 output.positionWS.xyz = vertexInput.positionWS;
                 output.positionCS = vertexInput.positionCS;
 
                 // 如果定义了法线贴图
-            #ifdef _NORMALMAP
-                half3 viewDirWS = GetWorldSpaceViewDir(vertexInput.positionWS);
-                output.normalWS = half4(normalInput.normalWS, viewDirWS.x);
-                output.tangentWS = half4(normalInput.tangentWS, viewDirWS.y);
-                output.bitangentWS = half4(normalInput.bitangentWS, viewDirWS.z);
-            #else
-                output.normalWS = NormalizeNormalPerVertex(normalInput.normalWS);
-            #endif
+                #ifdef _NORMALMAP
+                    half3 viewDirWS = GetWorldSpaceViewDir(vertexInput.positionWS);
+                    output.normalWS = half4(normalInput.normalWS, viewDirWS.x);
+                    output.tangentWS = half4(normalInput.tangentWS, viewDirWS.y);
+                    output.bitangentWS = half4(normalInput.bitangentWS, viewDirWS.z);
+                #else
+                    output.normalWS = NormalizeNormalPerVertex(normalInput.normalWS);
+                #endif
 
+                // baked GI
+                // 此函数功能和下面realtime GI一致，用于展开光照贴图
                 OUTPUT_LIGHTMAP_UV(input.staticLightmapUV, unity_LightmapST, output.staticLightmapUV);
-            #ifdef DYNAMICLIGHTMAP_ON
-                output.dynamicLightmapUV = input.dynamicLightmapUV.xy * unity_DynamicLightmapST.xy + unity_DynamicLightmapST.zw;
-            #endif
+                // realtime GI
+                #ifdef DYNAMICLIGHTMAP_ON
+                    output.dynamicLightmapUV = input.dynamicLightmapUV.xy * unity_DynamicLightmapST.xy + unity_DynamicLightmapST.zw;
+                #endif
+                // 如果不受GI影响时，计算SH光照
                 OUTPUT_SH(output.normalWS.xyz, output.vertexSH);
 
+                // 计算额外灯的逐顶点光照，这个需要在URP全局配置中进行设置
                 #ifdef _ADDITIONAL_LIGHTS_VERTEX
-                    // 计算额外灯的逐顶点关照
                     half3 vertexLight = VertexLighting(vertexInput.positionWS, normalInput.normalWS);
                     output.fogFactorAndVertexLight = half4(fogFactor, vertexLight);
                 #else
                     output.fogFactor = fogFactor;
                 #endif
 
+                // 当开启主灯阴影但是没有开启级联阴影时，激活
+                // 可在URP全局阴影设置中开启
+                // 级联阴影是指，根据不同的距离范围，渲染不同分辨率的阴影，类似阴影LOD
                 #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
                     output.shadowCoord = GetShadowCoord(vertexInput);
                 #endif
@@ -402,27 +478,34 @@ Shader "Shader Learning/URP/E12_SimpleLit"
             #endif
             )
             {
+                // GPU Instancing
                 UNITY_SETUP_INSTANCE_ID(input);
+                // VR相关
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
                 SurfaceData surfaceData;
+                // 数据初始化
                 InitializeSimpleLitSurfaceData(input.uv, surfaceData);
-
-            #ifdef LOD_FADE_CROSSFADE
-                LODFadeCrossFade(input.positionCS);
-            #endif
+                
+                // LOD相关
+                #ifdef LOD_FADE_CROSSFADE
+                    LODFadeCrossFade(input.positionCS);
+                #endif
 
                 InputData inputData;
                 InitializeInputData(input, surfaceData.normalTS, inputData);
                 SETUP_DEBUG_TEXTURE_DATA(inputData, input.uv, _BaseMap);
 
-            #ifdef _DBUFFER
-                ApplyDecalToSurfaceData(input.positionCS, surfaceData, inputData);
-            #endif
-
-                half4 color = UniversalFragmentBlinnPhong(inputData, surfaceData);
+                // Render Feature中Decal相关
+                #ifdef _DBUFFER
+                    ApplyDecalToSurfaceData(input.positionCS, surfaceData, inputData);
+                #endif
+                
+                // BlinnPhong光照模型
+                half4 color = UniversalFragmentBlinnPhong1(inputData, surfaceData);
                 // 雾效
                 color.rgb = MixFog(color.rgb, inputData.fogCoord);
+                // 判断透明度，根据是否是透明材质求，及是否通过AlphaTest
                 color.a = OutputAlpha(color.a, IsSurfaceTypeTransparent(_Surface));
 
                 outColor = color;

@@ -162,7 +162,7 @@
                 half3 V = normalize(_WorldSpaceCameraPos.xyz - i.positionWS.xyz);
                 half3 H = normalize(L+V);
                 half4 specular = _SpecularColor * specularIntensity * pow(saturate(dot(N,H)),specularSmoothness);
-                // return specular;
+                //return specular;
 
                 //水的反射
                 half3 reflectionUV = reflect(-V,normal);
@@ -190,7 +190,7 @@
                 half4 rampTex02 = SAMPLE_TEXTURE2D(_RampTexture, sampler_RampTexture, float2(depthWater,0));
                 c += (opaqueTex + caustic * lightness) * rampTex02;
                 // c *= opaqueTex;
-                // c += + caustic;
+                // c += caustic;
                 return c;
             }
             ENDHLSL

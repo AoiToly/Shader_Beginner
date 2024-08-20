@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.IO;
+using UnityEngine;
 
 public class WaterColor : MonoBehaviour
 {
@@ -8,6 +9,11 @@ public class WaterColor : MonoBehaviour
     public Gradient WaterGradient02;
 
     public Texture2D RampTexture;
+
+    private void Start()
+    {
+        
+    }
 
     void OnValidate()
     {
@@ -33,6 +39,14 @@ public class WaterColor : MonoBehaviour
         RampTexture.Apply();
 
         //全局赋值
-        Shader.SetGlobalTexture("_RampTexture", RampTexture);
+        //Shader.SetGlobalTexture("_RampTexture", RampTexture);
+
+        // 保存到磁盘
+        var bytes = RampTexture.EncodeToPNG();
+        var file = File.Open(Application.dataPath + "/ShaderLearning/URPExamples/E13_Water/RampTex.png", FileMode.Create);
+        var binary = new BinaryWriter(file);
+        binary.Write(bytes);
+        file.Close();
+
     }
 }
