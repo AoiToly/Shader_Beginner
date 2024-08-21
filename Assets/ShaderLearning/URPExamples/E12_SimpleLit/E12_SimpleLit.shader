@@ -640,6 +640,7 @@ Shader "Shader Learning/URP/E12_SimpleLit"
             ENDHLSL
         }
 
+        // 当管线开启MSAA时启用此pass
         Pass
         {
             Name "DepthOnly"

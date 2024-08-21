@@ -1,4 +1,4 @@
-﻿Shader "Water"
+﻿Shader "taecg/URP/Water"
 {
     Properties
     {
