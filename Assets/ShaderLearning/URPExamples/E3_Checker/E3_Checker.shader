@@ -20,10 +20,20 @@ Shader "Shader Learning/URP/E3_Checker"
         
         Pass
         {
+            Tags
+            {
+                "LightMode" = "UniversalForward"
+            }
+
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_fog
+            
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile _ SHADOWS_SHADOWMASK
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
 
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -43,6 +53,7 @@ Shader "Shader Learning/URP/E3_Checker"
                 float2 uv : TEXCOORD0;
                 float3 positionOS : TEXCOORD1;
                 float fogCoord  : TEXCOORD2;
+                float4 shadowCoord             : TEXCOORD4;
             };
 
             CBUFFER_START(UnityPerMaterial)
@@ -58,18 +69,70 @@ Shader "Shader Learning/URP/E3_Checker"
                 o.uv = v.uv * _Repeat;
                 o.positionOS = v.positionOS.xyz;
                 o.fogCoord = ComputeFogFactor(o.positionCS.z);
+                float3 positionWS = TransformObjectToWorld(v.positionOS);
+                o.shadowCoord = TransformWorldToShadowCoord(positionWS);
                 return o;
             }
 
             void frag (Varyings i, out half4 outColor : SV_Target)
             {
                 half2 uv = floor(i.uv * 2) / 2;
+
+                Light mainLight = GetMainLight(i.shadowCoord);
                 
-                outColor = frac(uv.x + uv.y) * (i.positionOS.y + _Offset) * _Color;
+                outColor = frac(uv.x + uv.y) * (i.positionOS.y + _Offset) * _Color * mainLight.shadowAttenuation;
                 outColor.rgb = MixFog(outColor.rgb, i.fogCoord);
             }
             ENDHLSL
         }
+        
+        Pass
+        {
+            Name "ShadowCaster"
+            Tags
+            {
+                "LightMode" = "ShadowCaster"
+            }
+
+            // -------------------------------------
+            // Render State Commands
+            ZWrite On
+            ZTest LEqual
+            ColorMask 0
+            Cull[_Cull]
+
+            HLSLPROGRAM
+            #pragma target 2.0
+
+            // -------------------------------------
+            // Shader Stages
+            #pragma vertex ShadowPassVertex
+            #pragma fragment ShadowPassFragment
+
+            // -------------------------------------
+            // Material Keywords
+            #pragma shader_feature_local _ALPHATEST_ON
+            #pragma shader_feature_local_fragment _GLOSSINESS_FROM_BASE_ALPHA
+
+            // -------------------------------------
+            // Unity defined keywords
+            #pragma multi_compile_fragment _ LOD_FADE_CROSSFADE
+
+            //--------------------------------------
+            // GPU Instancing
+            #pragma multi_compile_instancing
+            #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DOTS.hlsl"
+
+            // This is used during shadow map generation to differentiate between directional and punctual light shadows, as they use different formulas to apply Normal Bias
+            #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
+
+            // -------------------------------------
+            // Includes
+            #include "Packages/com.unity.render-pipelines.universal/Shaders/SimpleLitInput.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/Shaders/ShadowCasterPass.hlsl"
+            ENDHLSL
+        }
+
     }
 
     // Builtin
