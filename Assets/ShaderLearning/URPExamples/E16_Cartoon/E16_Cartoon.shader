@@ -177,7 +177,7 @@ Shader "Shader Learning/URP/E16_Cartoon"
                     fresnel = _FresnelColor * smoothstep(0.5, 0.5 + _Fresnel.z, fresnel);
                 }
 
-                c.rgb *= lambert * shadow;
+                c.rgb *= lambert * shadow.xyz;
                 c += specular;
                 c.rgb = MixFog(c.rgb, i.fogCoord);
                 return c;
