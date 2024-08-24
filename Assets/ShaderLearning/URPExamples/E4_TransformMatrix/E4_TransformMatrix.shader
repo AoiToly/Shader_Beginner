@@ -154,7 +154,7 @@ Shader "Shader Learning/URP/E4_TransformMatrix"
                 // 透视相机
                 #if _ISPERSPECTIVE_ON
                     // 相机Fov的一半的弧度
-                    _CameraFOV = radians(_CameraFOV * 0.5);
+                    _CameraFOV = radians(_CameraFOV);
                     // 近裁剪面
                     float n = _ProjectionParams.y;
                     // 远裁剪面
@@ -162,7 +162,7 @@ Shader "Shader Learning/URP/E4_TransformMatrix"
                     // 屏幕宽高比
                     float aspect = _ScreenParams.x / _ScreenParams.y;
                     // 近裁剪面的高/2
-                    float h = n * tan(_CameraFOV);
+                    float h = n * tan(_CameraFOV / 2);
                     // 近裁剪面的宽/2
                     float w = h * aspect;
 
@@ -221,30 +221,11 @@ Shader "Shader Learning/URP/E4_TransformMatrix"
                 float4x4 MatrixViewToClipOrtho = mul(MatrixViewToClipOrthoS, MatrixViewToClipOrthoT);
 
                 #if _ISPERSPECTIVE_ON
-                    float4x4 MatrixViewToClip = MatrixViewToClipOrtho * MatrixPerspToOrtho;
+                    float4x4 MatrixViewToClip = mul(MatrixViewToClipOrtho, MatrixPerspToOrtho);
                 #else
                     float4x4 MatrixViewToClip = MatrixViewToClipOrtho;
                 #endif
                 float4 positionCS = mul(MatrixViewToClip, positionVS);
-
-                //// DirectX平台
-                //#if UNITY_UV_STARTS_AT_TOP
-                //    float4x4 MatrixPerspective = float4x4(
-                //        n/w, 0, 0, 0,
-                //        0, -n/h, 0, 0,
-                //        0, 0, n/(f-n), (n*f)/(f-n),
-                //        0, 0, -1, 0);
-                //// OpenGL平台
-                //#else
-                //    float4x4 MatrixPerspective = float4x4(
-                //        n/w, 0, 0, 0,
-                //        0, n/h, 0, 0,
-                //        0, 0, (n+f)/(n-f), (2*n*f)/(n-f),
-                //        0, 0, -1, 0);
-                //#endif
-                //positionCS = mul(MatrixPerspective, positionVS);
-
-
 
                 Varyings o = (Varyings)0;
                 o.positionCS = positionCS;
