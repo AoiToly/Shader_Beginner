@@ -452,6 +452,7 @@ Shader "Shader Learning/URP/E12_SimpleLit"
 
                 // 计算额外灯的逐顶点光照，这个需要在URP全局配置中进行设置
                 #ifdef _ADDITIONAL_LIGHTS_VERTEX
+                    // 逐顶点光的颜色
                     half3 vertexLight = VertexLighting(vertexInput.positionWS, normalInput.normalWS);
                     output.fogFactorAndVertexLight = half4(fogFactor, vertexLight);
                 #else

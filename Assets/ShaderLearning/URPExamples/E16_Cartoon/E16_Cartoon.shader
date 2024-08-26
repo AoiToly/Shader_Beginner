@@ -85,18 +85,18 @@ Shader "Shader Learning/URP/E16_Cartoon"
             // 顶点着色器的输入（模型的数据信息）
             struct Attributes
             {
-                float3 positionOS : POSITION;
-                float2 uv : TEXCOORD0;
-                float3 normalOS : NORMAL;
+                float3 positionOS   : POSITION;
+                float2 uv           : TEXCOORD0;
+                float3 normalOS     : NORMAL;
             };
             struct Varyings
             {
-                float4 positionCS : SV_POSITION;
-                float2 uv : TEXCOORD0;
-                float fogCoord  : TEXCOORD1;
-                float3 normalWS : TEXCOORD2;
-                float3 positionWS : TEXCOORD3;
-                float4 shadowCoord             : TEXCOORD4;
+                float4 positionCS   : SV_POSITION;
+                float2 uv           : TEXCOORD0;
+                float fogCoord      : TEXCOORD1;
+                float3 normalWS     : TEXCOORD2;
+                float3 positionWS   : TEXCOORD3;
+                float4 shadowCoord  : TEXCOORD4;
             };
 
             // 顶点着色器
@@ -109,7 +109,13 @@ Shader "Shader Learning/URP/E16_Cartoon"
                 o.fogCoord = ComputeFogFactor(o.positionCS.z);
                 o.normalWS = TransformObjectToWorldNormal(v.normalOS);
                 o.positionWS = TransformObjectToWorld(v.positionOS);
-                o.shadowCoord = TransformWorldToShadowCoord(o.positionWS);
+                #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
+                    #if defined(_MAIN_LIGHT_SHADOWS_SCREEN) && !defined(_SURFACE_TYPE_TRANSPARENT)
+                        o.shadowCoord = ComputeScreenPos(o.positionCS);
+                    #else
+                        o.shadowCoord = TransformWorldToShadowCoord(o.positionWS);
+                    #endif
+                #endif
                 return o;
             }
 
@@ -126,37 +132,47 @@ Shader "Shader Learning/URP/E16_Cartoon"
                 half4 c = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv);
                 c *= _Color;
 
+                // 阴影
+                #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
+                    i.shadowCoord = i.shadowCoord;
+                #elif defined(MAIN_LIGHT_CALCULATE_SHADOWS)
+                    i.shadowCoord = TransformWorldToShadowCoord(i.positionWS);
+                #else
+                    i.shadowCoord = float4(0, 0, 0, 0);
+                #endif
                 // Lambert
                 Light mainLight = GetMainLight(i.shadowCoord);
+
                 half3 l = mainLight.direction;
                 half3 lightColor = mainLight.color;
                 half3 n = i.normalWS;
                 half3 v = normalize(_WorldSpaceCameraPos - i.positionWS);
                 half ndotl = dot(n, l);
+                half3 lambert = lightColor * _LightIntensity;
 
                 // 明暗色阶
                 // 多阶硬边明暗面
                 half level;
                 {
+                    half lambertDarkSide = ndotl;
+                    half shadowAttenuation = mainLight.shadowAttenuation;
+                    // 纹理中的阴影（无法受到光照影响，需要使用额外贴图）
+                    // 将范围调整为0.5-1，保证暗面没有那么暗
+                    half shadowMask = SAMPLE_TEXTURE2D(_ShadowMask, sampler_MainTex, i.uv).a *0.5 + 0.5;
+                    half shadowUV = min(min(lambertDarkSide, shadowAttenuation), shadowMask);
+
                     // 方案一，算法实现
                     // level = max(0.3, ceil(ndotl * _Step)/_Step);
 
                     // 方案二，采样阴影贴图
-                    half shadowRampMap = SAMPLE_TEXTURE2D(_ShadowRampMap, sampler_ShadowRampMap, half2(ndotl, ndotl)).r;
+                    half shadowRampMap = SAMPLE_TEXTURE2D(_ShadowRampMap, sampler_ShadowRampMap, half2(shadowUV, 0)).r;
                     level = max(0.3, shadowRampMap);
-
-                    // 纹理中的阴影（无法受到光照影响，需要使用额外贴图）
-                    // 将范围调整为0.5-1，保证暗面没有那么暗
-                    half shadowMask = SAMPLE_TEXTURE2D(_ShadowMask, sampler_MainTex, i.uv).r *0.5 + 0.5;
-                    level *= shadowMask * mainLight.shadowAttenuation;
                 }
+                
                 // 采样阴影颜色
                 half4 shadowMap = SAMPLE_TEXTURE2D(_ShadowMap, sampler_MainTex, i.uv);
-
                 half4 shadow = lerp(shadowMap, 1, level);
 
-                half3 lambert = lightColor * _LightIntensity;
-                
                 // specular
                 half4 specular; 
                 {
@@ -179,6 +195,7 @@ Shader "Shader Learning/URP/E16_Cartoon"
 
                 c.rgb *= lambert * shadow.xyz;
                 c += specular;
+                c += fresnel;
                 c.rgb = MixFog(c.rgb, i.fogCoord);
                 return c;
             }

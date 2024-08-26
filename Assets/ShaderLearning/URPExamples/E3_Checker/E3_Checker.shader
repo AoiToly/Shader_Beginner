@@ -43,17 +43,19 @@ Shader "Shader Learning/URP/E3_Checker"
 
             struct Attributes
             {
-                float4 positionOS : POSITION;
-                float2 uv : TEXCOORD0;
+                float4 positionOS   : POSITION;
+                float2 uv           : TEXCOORD0;
             };
 
             struct Varyings
             {
-                float4 positionCS : SV_POSITION;
-                float2 uv : TEXCOORD0;
-                float3 positionOS : TEXCOORD1;
-                float fogCoord  : TEXCOORD2;
-                float4 shadowCoord             : TEXCOORD4;
+                float4 positionCS   : SV_POSITION;
+                float2 uv           : TEXCOORD0;
+                float3 positionOS   : TEXCOORD1;
+                float fogCoord      : TEXCOORD2;
+                float3 positionWS   : TEXCOORD3;
+
+                float4 shadowCoord  : TEXCOORD4;
             };
 
             CBUFFER_START(UnityPerMaterial)
@@ -69,14 +71,28 @@ Shader "Shader Learning/URP/E3_Checker"
                 o.uv = v.uv * _Repeat;
                 o.positionOS = v.positionOS.xyz;
                 o.fogCoord = ComputeFogFactor(o.positionCS.z);
-                float3 positionWS = TransformObjectToWorld(v.positionOS);
-                o.shadowCoord = TransformWorldToShadowCoord(positionWS);
+                o.positionWS = TransformObjectToWorld(v.positionOS.xyz);
+                #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
+                    #if defined(_MAIN_LIGHT_SHADOWS_SCREEN) && !defined(_SURFACE_TYPE_TRANSPARENT)
+                        o.shadowCoord = ComputeScreenPos(o.positionCS);
+                    #else
+                        o.shadowCoord = TransformWorldToShadowCoord(o.positionWS);
+                    #endif
+                #endif
                 return o;
             }
 
             void frag (Varyings i, out half4 outColor : SV_Target)
             {
                 half2 uv = floor(i.uv * 2) / 2;
+
+                #if defined(REQUIRES_VERTEX_SHADOW_COORD_INTERPOLATOR)
+                    i.shadowCoord = i.shadowCoord;
+                #elif defined(MAIN_LIGHT_CALCULATE_SHADOWS)
+                    i.shadowCoord = TransformWorldToShadowCoord(i.positionWS);
+                #else
+                    i.shadowCoord = float4(0, 0, 0, 0);
+                #endif
 
                 Light mainLight = GetMainLight(i.shadowCoord);
                 
