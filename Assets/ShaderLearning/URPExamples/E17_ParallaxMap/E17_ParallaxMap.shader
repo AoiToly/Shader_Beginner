@@ -137,7 +137,7 @@ Shader "Shader Learning/URP/E17_ParallaxMap"
                     offset = currentDepth * deltaOffset;
                 }
                 // 通过二分查找精确采样结果
-                for(int j = 0; j < 5; j++)
+                for(int k = 0; k < 5; k++)
                 {
                     deltaDepth /= 2;
                     if(currentDepth == parallaxDepth)
