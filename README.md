@@ -1,3 +1,3 @@
-# Shader_Starter
+# Shader_Beginner
  Unity shader learning.
-Include built-in and urp render pipeline.
+ Include built-in and urp render pipeline.
