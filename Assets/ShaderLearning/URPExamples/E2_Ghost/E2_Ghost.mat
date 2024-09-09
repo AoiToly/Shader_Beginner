@@ -41,7 +41,7 @@ Material:
     - _YOffset: -0.34
     m_Colors:
     - _Animation: {r: 2, g: 2, b: 0.3, a: 0.3}
-    - _AnimationX: {r: 2, g: 0.2, b: 1, a: 0.5}
+    - _AnimationX: {r: 0.35, g: 0.2, b: 1, a: 0.5}
     - _AnimationZ: {r: 2, g: 0.2, b: 1, a: 0}
     - _Fresnel: {r: 1.65, g: 1, b: 0.02, a: -0.59}
     - _FresnelColor: {r: 1, g: 0, b: 0.7163105, a: 1}

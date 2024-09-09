@@ -16,7 +16,7 @@ public class E13_GPUInstancing : MonoBehaviour
             Vector3 pos = new Vector3(xz.x, 0, xz.y);
             GameObject obj = GameObject.Instantiate(Prefab, pos, Quaternion.identity);
             Color color = Random.ColorHSV();
-            prop.SetColor("_BaseColor", color);
+            prop.SetColor("_Color", color);
             obj.GetComponent<Renderer>().SetPropertyBlock(prop);
         }
     }

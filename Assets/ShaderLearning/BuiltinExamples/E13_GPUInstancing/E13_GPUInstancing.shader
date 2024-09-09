@@ -60,6 +60,7 @@ Shader "Shader Learning/Builtin/E13_GPUInstancing"
                 UNITY_SETUP_INSTANCE_ID(i);
                 // 获取常量寄存器中的属性值
                 fixed4 c = UNITY_ACCESS_INSTANCED_PROP(prop, _Color);
+
                 return c;
             }
             ENDCG

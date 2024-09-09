@@ -13,7 +13,6 @@ Material:
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - DISTORTENABLED
-  - _MASKENABLED_ON
   m_InvalidKeywords:
   - _DISTORTENABLED_ON
   m_LightmapFlags: 4
@@ -87,7 +86,7 @@ Material:
     - _Intensity: 1
     - _MainUVSpeedX: 0.1
     - _MainUVSpeedY: 0.1
-    - _MaskEnabled: 1
+    - _MaskEnabled: 0
     - _MaskUVSpeedX: 0.2
     - _MaskUVSpeedY: 0
     - _Metallic: 0

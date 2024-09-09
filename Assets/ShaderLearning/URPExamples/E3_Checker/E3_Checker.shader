@@ -5,6 +5,7 @@ Shader "Shader Learning/URP/E3_Checker"
         _Repeat("Repeat", float) = 5
         _Color("Color", Color) = (1, 1, 1, 1)
         _Offset("Offset", float) = 0.6
+        [Toggle]_Shadow("Shadow", float) = 0
     }
 
     // URP
@@ -29,6 +30,7 @@ Shader "Shader Learning/URP/E3_Checker"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_fog
+            #pragma multi_compile _ _SHADOW_ON
             
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
             #pragma multi_compile _ SHADOWS_SHADOWMASK
@@ -96,7 +98,11 @@ Shader "Shader Learning/URP/E3_Checker"
 
                 Light mainLight = GetMainLight(i.shadowCoord);
                 
+            #if _SHADOW_ON
                 outColor = frac(uv.x + uv.y) * (i.positionOS.y + _Offset) * _Color * mainLight.shadowAttenuation;
+            #else
+                outColor = frac(uv.x + uv.y) * (i.positionOS.y + _Offset) * _Color;
+            #endif
                 outColor.rgb = MixFog(outColor.rgb, i.fogCoord);
             }
             ENDHLSL
@@ -168,6 +174,7 @@ Shader "Shader Learning/URP/E3_Checker"
             #pragma fragment frag
 
             #include "UnityCG.cginc"
+            #include "AutoLight.cginc"
 
             struct Attributes
             {
@@ -180,6 +187,8 @@ Shader "Shader Learning/URP/E3_Checker"
                 float4 positionCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
                 float3 positionOS : TEXCOORD1;
+                UNITY_SHADOW_COORDS(2)
+                float3 positionWS : TEXCOORD3;
             };
 
             half _Repeat;
@@ -192,14 +201,19 @@ Shader "Shader Learning/URP/E3_Checker"
                 o.positionCS = UnityObjectToClipPos(v.positionOS.xyz);
                 o.uv = v.uv * _Repeat;
                 o.positionOS = v.positionOS.xyz;
+                TRANSFER_SHADOW(o);
+                o.positionWS = mul(unity_ObjectToWorld, v.positionOS);
                 return o;
             }
 
             void frag (Varyings i, out half4 outColor : SV_Target)
             {
                 half2 uv = floor(i.uv * 2) / 2;
+                half4 chessColor = frac(uv.x + uv.y) * (i.positionOS.y + _Offset) * _Color;
                 
-                outColor = frac(uv.x + uv.y) * (i.positionOS.y + _Offset) * _Color;
+                UNITY_LIGHT_ATTENUATION(atten, i, i.positionWS);
+
+                outColor = chessColor * atten;
             }
             ENDCG
         }

@@ -177,7 +177,7 @@ Shader "Shader Learning/URP/E13_Water"
                 // ·´Éä+·ÆÄù¶û
                 N = normal;
                 half3 reflectionUV = reflect(-V, N);
-                half4 reflectionTex = SAMPLE_TEXTURECUBE(_ReflectionTex, sampler_ReflectionTex, reflectionUV);
+                half4 reflectionTex = SAMPLE_TEXTURECUBE(_ReflectionTex, sampler_ReflectionTex, reflectionUV + normal);
                 half fresnel = pow(1 - saturate(dot(i.normalWS, V)), 3);
                 half4 reflection = reflectionTex * fresnel;
 
