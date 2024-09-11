@@ -22,7 +22,7 @@ Shader "ShaderToy/DefaultShaderToy"
                 // Time varying pixel color
                 fixed3 col = 0.5 + 0.5*cos(_Time.y + i.uv.xyx + half3(0,2,4));
 
-                //// Output to screen
+                // Output to screen
                 fixed4 c = fixed4(col,1.0);
                 return c;
             }
